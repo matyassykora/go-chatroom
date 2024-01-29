@@ -1,0 +1,31 @@
+<!doctype html>
+<html
+  lang="en"
+  class="dark"
+>
+  <head>
+    <title>{{.Title}}</title>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <link
+      href="css/styles.css"
+      rel="stylesheet"
+    />
+    <script src="js/htmx.min.js"></script>
+    <script src="js/ws.js"></script>
+    <!-- <script src="js/websockets.js"></script> -->
+  </head>
+
+  <body class="h-screen flex flex-col bg-white dark:bg-slate-800 dark:text-sky-100">
+    <nav class="relative h-16 inset-x-0 top-0">
+      {{template "partials/header" .}}
+    </nav>
+    <main class="container mx-auto h-full w-screen flex flex-col">{{embed}}</main>
+    <!-- <footer class="absolute h-16 inset-x-0 bottom-0">
+      {{template "partials/footer" .}}
+    </footer> -->
+  </body>
+</html>

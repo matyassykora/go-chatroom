@@ -1,0 +1,50 @@
+<!-- <style type="text/css">
+  #log {
+    margin: 0;
+    padding: 0.5em 0.5em 0.5em 0.5em;
+    position: absolute;
+    top: 0.5em;
+    left: 0.5em;
+    right: 0.5em;
+    bottom: 3em;
+    overflow: auto;
+  }
+</style> -->
+<div
+  class="bg-slate-700 flex-1"
+  id="log"
+>
+  <noscript>
+    <h1>You need to enable JavaScript to use this app!</h1>
+  </noscript>
+</div>
+<div
+  class="h-16 bottom-0"
+  hx-ext="ws"
+  ws-connect="/ws"
+  hx-on::ws-after-message="document.getElementById('form').reset();"
+  hx-on::ws-error="alert('error'); location.reload();"
+>
+  <form
+    class="flex"
+    id="form"
+    ws-send
+  >
+    {{.Username}}
+    <input
+      class="flex-1 border border-gray-400 dark:bg-slate-800"
+      type="text"
+      id="msg"
+      name="msg"
+      size="64"
+      autofocus
+      autocomplete="off"
+    />
+    <button
+      type="submit"
+      class="btn-gray border border-gray-400 rounded-md"
+    >
+      Send
+    </button>
+  </form>
+</div>
