@@ -32,9 +32,16 @@ type hub struct {
 
 	// Unregister requests from clients.
 	Unregister chan *websocket.Conn
+}
 
-	// Mutex for clients
-	mutex sync.Mutex
+func NewHub(s *session.Store) *hub {
+	return &hub{
+		store:      s,
+		clients:    make(map[*websocket.Conn]*client),
+		Register:   make(chan *websocket.Conn),
+		Broadcast:  make(chan string),
+		Unregister: make(chan *websocket.Conn),
+	}
 }
 
 type message struct {
@@ -52,15 +59,9 @@ type HtmxHeader struct {
 
 // client is a middleman between the websocket connection and the hub.
 type client struct {
-	Username string
-	// active bool
-}
-
-type server struct {
-	messageChan  chan string
-	pastMessages []string
-	mutex        sync.Mutex
-	hub          *hub
+	Username  string
+	mutex     sync.Mutex
+	isClosing bool
 }
 
 func (h *hub) Run() {
@@ -71,20 +72,27 @@ func (h *hub) Run() {
 			h.clients[connection] = &client{
 				Username: username,
 			}
-			log.Println("connection registered")
+			log.Println("Connection registered")
 
 		case msg := <-h.Broadcast:
 			// log.Println("message received:", msg)
 
-			// Send the message to all clients
-			for connection := range h.clients {
-				if err := connection.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-					log.Println("write error:", err)
+			// Send the message to all clients in parallel
+			for connection, c := range h.clients {
+				go func(connection *websocket.Conn, c *client) {
+					c.mutex.Lock()
+					defer c.mutex.Unlock()
+					if c.isClosing {
+						return
+					}
+					if err := connection.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+						log.Println("write error:", err)
 
-					h.Unregister <- connection
-					connection.WriteMessage(websocket.CloseMessage, []byte{})
-					connection.Close()
-				}
+						connection.WriteMessage(websocket.CloseMessage, []byte{})
+						connection.Close()
+						h.Unregister <- connection
+					}
+				}(connection, c)
 			}
 
 		case connection := <-h.Unregister:
@@ -97,17 +105,6 @@ func (h *hub) Run() {
 
 			log.Println("connection unregistered")
 		}
-	}
-}
-
-// NewHub creates new Hub
-func NewHub(s *session.Store) *hub {
-	return &hub{
-		store:      s,
-		clients:    make(map[*websocket.Conn]*client),
-		Register:   make(chan *websocket.Conn),
-		Broadcast:  make(chan string),
-		Unregister: make(chan *websocket.Conn),
 	}
 }
 
@@ -128,12 +125,6 @@ func (h *hub) HandleWebsocketUpgrade(c *fiber.Ctx) error {
 }
 
 func (h *hub) HandleWebsockets(c *websocket.Conn) {
-	// c.Locals is added to the *websocket.Conn
-	// log.Println(c.Locals("allowed"))  // true
-	// log.Println(c.Params("id"))       // 123
-	// log.Println(c.Query("v"))         // 1.0
-	// log.Println(c.Cookies("session")) // ""
-
 	username := c.Locals("username").(string)
 
 	log.Printf("websocket user: %s", username)
@@ -150,7 +141,7 @@ func (h *hub) HandleWebsockets(c *websocket.Conn) {
 		messageType, msg, err := c.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Println("read error:", err)
+				log.Println("Read error:", err)
 			}
 			return
 		}

@@ -53,7 +53,7 @@ func main() {
 
 	app.Post("/chat", hub.Login)
 	app.Get("/chat", hub.HandleChatsGet)
-	app.Get("/", handlers.HandleLoginGet)
+	app.Get("/", hub.HandleLoginGet)
 
 	app.Get("/logout", func(c *fiber.Ctx) error {
 		sess, err := store.Get(c)

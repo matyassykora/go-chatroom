@@ -9,6 +9,7 @@ require (
 	github.com/gofiber/template/html/v2 v2.1.0
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/google/uuid v1.5.0
+	golang.org/x/crypto v0.15.0
 )
 
 require (
